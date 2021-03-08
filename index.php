@@ -47,6 +47,7 @@ function renderIndex( $entityManager, $page, $sortName, $searchName ) {
        ->add( 'from', 'Product u' )
        ->setFirstResult( $page * 5 )
        ->setMaxResults( 5 );
+
     if ( ! empty( $sortName ) ) {
         if ( $sortName === 'asc' ) {
             $qb->orderBy( 'u.name', 'ASC' );
@@ -58,12 +59,12 @@ function renderIndex( $entityManager, $page, $sortName, $searchName ) {
     if ( ! empty( $searchName ) ) {
         $qb->andWhere( 'u.name LIKE :name' )
            ->setParameter( 'name', $searchName );
-
     }
 
     $query      = $qb->getQuery();
     $products   = $query->getResult();
     $repository = $entityManager->getRepository( 'Product' );
+
     $count      = $repository->createQueryBuilder( 'u' )
                              ->select( 'count(u.id)' );
 
