@@ -41,12 +41,12 @@ include 'header.php';
 	</a>
 	<nav aria-label="Page navigation example">
 		<ul class="pagination">
-            <?php for ( $i = 5, $page = 1; $i < $count; $i += 5, $page += 1 ): ?>
-				<li class="page-item"><a class="page-link" href="/?=<?= http_build_query( [
+            <?php for ( $i = 1; $i <= ceil($count/5); $i += 1 ): ?>
+				<li class="page-item"><a class="page-link" href="/?<?= http_build_query( [
                         'sort-name'   => $sortName,
-                        'page'        => $page,
+                        'page'        => $i ,
                         'search-name' => $searchName
-                    ] ) ?>"><?= $page ?></a></li>
+                    ] ) ?>"><?= $i  ?></a></li>
             <?php endfor; ?>
 		</ul>
 	</nav>

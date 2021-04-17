@@ -9,31 +9,31 @@ use Doctrine\ORM\Tools\Pagination\Paginator;
 
 $route      = $_GET['route'] ?? '';
 $id         = $_GET['id'] ?? '';
-$page       = $_GET['page'] ?? 0;
+$page       = $_GET['page'] ?? 1;
 $sortName   = $_GET['sort-name'] ?? '';
 $searchName = $_GET['search-name'] ?? '';
 
 if ( $route === 'delete' ) {
-    deleteItem( $id, $entityManager );
-    renderIndex( $entityManager, $page, $sortName, $searchName );
+	deleteItem( $id, $entityManager );
+	renderIndex( $entityManager, $page, $sortName, $searchName );
 } elseif ( $route === 'create' ) {
-    include 'view/create.php';
+	include 'view/create.php';
 } elseif ( $route === 'update' ) {
-    $productRepository = $entityManager->getRepository( 'Product' );
-    $product           = $productRepository->find( $_GET['id'] );
+	$product = findById( $_GET['id'], $entityManager );
 
-    include 'view/update.php';
+	include 'view/update.php';
 }
 
 if ( $route == '' ) {
-    if ( isset( $_POST['name'] ) && ! isset( $_POST['id'] ) ) {
-        createItem( $_POST['name'], $entityManager );
-    }
-    if ( isset( $_POST['name'] ) && isset( $_POST['id'] ) ) {
-        updateItem( $_POST['name'], $_POST['id'], $entityManager );
-    }
-    renderIndex( $entityManager, $page, $sortName, $searchName );
+	if ( isset( $_POST['name'] ) && ! isset( $_POST['id'] ) ) {
+		createItem( $_POST['name'], $entityManager );
+	}
+	if ( isset( $_POST['name'] ) && isset( $_POST['id'] ) ) {
+		updateItem( $_POST['name'], $_POST['id'], $entityManager );
+	}
+	renderIndex( $entityManager, $page, $sortName, $searchName );
 }
+
 /**
  * @param $entityManager
  * @param $page
@@ -41,41 +41,25 @@ if ( $route == '' ) {
  * @param $searchName
  */
 function renderIndex( $entityManager, $page, $sortName, $searchName ) {
-    $qb = new QueryBuilder( $entityManager );
+	$qb = new QueryBuilder( $entityManager );
 
-    $qb->add( 'select', 'u' )
-       ->add( 'from', 'Product u' )
-       ->setFirstResult( $page * 5 )
-       ->setMaxResults( 5 );
+	$qb->add( 'select', 'u' )
+	   ->add( 'from', 'Product u' )
+	   ->setFirstResult( ( $page - 1 ) * 5 )
+	   ->setMaxResults( 5 );
 
-    if ( ! empty( $sortName ) ) {
-        if ( $sortName === 'asc' ) {
-            $qb->orderBy( 'u.name', 'ASC' );
-        } elseif ( $sortName === 'desc' ) {
-            $qb->orderBy( 'u.name', 'DESC' );
-        }
+	if ( ! empty( $sortName ) ) {
+		sortByName( $qb, $sortName );
+	}
+	if ( ! empty( $searchName ) ) {
+		findByName( $qb, $searchName );
+	}
 
-    }
-    if ( ! empty( $searchName ) ) {
-        $qb->andWhere( 'u.name LIKE :name' )
-           ->setParameter( 'name', $searchName );
-    }
+	$query    = $qb->getQuery();
+	$products = $query->getResult();
 
-    $query      = $qb->getQuery();
-    $products   = $query->getResult();
-    $repository = $entityManager->getRepository( 'Product' );
-
-    $count      = $repository->createQueryBuilder( 'u' )
-                             ->select( 'count(u.id)' );
-
-    if ( ! empty( $searchName ) ) {
-        $count->andWhere( 'u.name LIKE :name' )
-              ->setParameter( 'name', $searchName );
-
-    }
-    $count = $count->getQuery()->getSingleScalarResult();
-
-    include 'view/index.php';
+	$count = getCountProduct( $searchName, $entityManager );
+	include 'view/index.php';
 }
 
 /**
@@ -83,14 +67,13 @@ function renderIndex( $entityManager, $page, $sortName, $searchName ) {
  * @param $entityManager
  */
 function deleteItem( $id, $entityManager ) {
-    if ( ! empty( $id ) ) {
-        $productRepository = $entityManager->getRepository( 'Product' );
-        $product           = $productRepository->find( $id );
-        if ( ! empty( $product ) ) {
-            $entityManager->remove( $product );
-            $entityManager->flush();
-        }
-    }
+	if ( ! empty( $id ) ) {
+		$product = findById( $id, $entityManager );
+		if ( ! empty( $product ) ) {
+			$entityManager->remove( $product );
+			$entityManager->flush();
+		}
+	}
 }
 
 /**
@@ -98,10 +81,10 @@ function deleteItem( $id, $entityManager ) {
  * @param $entityManager
  */
 function createItem( $name, $entityManager ) {
-    $product = new Product();
-    $product->setName( $name );
-    $entityManager->persist( $product );
-    $entityManager->flush();
+	$product = new Product();
+	$product->setName( $name );
+	$entityManager->persist( $product );
+	$entityManager->flush();
 }
 
 /**
@@ -110,10 +93,66 @@ function createItem( $name, $entityManager ) {
  * @param $entityManager
  */
 function updateItem( $name, $id, $entityManager ) {
-    $productRepository = $entityManager->getRepository( 'Product' );
-    $product           = $productRepository->find( $id );
-    if ( ! empty( $product ) ) {
-        $product->setName( $name );
-        $entityManager->flush();
-    }
+	$product = findById( $id, $entityManager );
+	if ( ! empty( $product ) ) {
+		$product->setName( $name );
+		$entityManager->flush();
+	}
+}
+
+/**
+ * @param $query
+ * @param $searchName
+ *
+ * @return mixed
+ */
+function findByName( $query, $searchName ) {
+	return $query->andWhere( 'u.name LIKE :name' )
+	             ->setParameter( 'name', $searchName );
+}
+
+/**
+ * @param $id
+ * @param $entityManager
+ *
+ * @return mixed
+ */
+function findById( $id, $entityManager ) {
+	$productRepository = $entityManager->getRepository( 'Product' );
+
+	return $productRepository->find( $id );
+}
+
+/**
+ * @param $searchName
+ * @param $entityManager
+ *
+ * @return mixed
+ */
+function getCountProduct( $searchName, $entityManager ) {
+	$repository = $entityManager->getRepository( 'Product' );
+
+	$countQuery = $repository->createQueryBuilder( 'u' )
+	                         ->select( 'count(u.id)' );
+	if ( ! empty( $searchName ) ) {
+		findByName( $countQuery, $searchName );
+	}
+
+	return $countQuery->getQuery()->getSingleScalarResult();
+}
+
+/**
+ * @param $query
+ * @param $sortName
+ *
+ * @return mixed
+ */
+function sortByName( $query, $sortName ) {
+	if ( $sortName === 'asc' ) {
+		$query = $query->orderBy( 'u.name', 'ASC' );
+	} elseif ( $sortName === 'desc' ) {
+		$query = $query->orderBy( 'u.name', 'DESC' );
+	}
+
+	return $query;
 }
