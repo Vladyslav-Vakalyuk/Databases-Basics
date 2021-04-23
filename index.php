@@ -6,12 +6,41 @@ use Doctrine\Common\Collections\Criteria;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\ORM\Tools\Console\ConsoleRunner;
 use Doctrine\ORM\Tools\Pagination\Paginator;
+use Symfony\Component\HttpFoundation\Cookie;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
 
-$route      = $_GET['route'] ?? '';
-$id         = $_GET['id'] ?? '';
-$page       = $_GET['page'] ?? 1;
-$sortName   = $_GET['sort-name'] ?? '';
-$searchName = $_GET['search-name'] ?? '';
+$request = new Request(
+	$_GET,
+	$_POST,
+	[],
+	$_COOKIE,
+	$_FILES,
+	$_SERVER
+);
+
+$time = $request->cookies->get( 'time' );
+
+if ( $time ) {
+	$timeSecondDiff = time() - $time;
+	echo "<H1>You are have been visited the site {$timeSecondDiff} seconds</H1>";
+}
+
+$response = new Response(
+	'Content',
+	Response::HTTP_OK,
+	[ 'content-type' => 'text/html' ]
+);
+if ( ! $time ) {
+	$response->headers->setCookie( Cookie::create( 'time', time() ) );
+	$response->send();
+}
+
+$route      = $request->query->get( 'route' );
+$id         = $request->query->get( 'id' );
+$page       = $request->query->get( 'page', 1 );
+$sortName   = $request->query->get( 'sort-name' );
+$searchName = $request->query->get( 'search-name' );
 
 if ( $route === 'delete' ) {
 	deleteItem( $id, $entityManager );
@@ -25,11 +54,14 @@ if ( $route === 'delete' ) {
 }
 
 if ( $route == '' ) {
-	if ( isset( $_POST['name'] ) && ! isset( $_POST['id'] ) ) {
-		createItem( $_POST['name'], $entityManager );
+	$name = $request->get( 'name' );
+	$id   = $request->get( 'id' );
+
+	if ( $name && null === $id ) {
+		createItem( $name, $entityManager );
 	}
-	if ( isset( $_POST['name'] ) && isset( $_POST['id'] ) ) {
-		updateItem( $_POST['name'], $_POST['id'], $entityManager );
+	if ( $name && $id ) {
+		updateItem( $name, $id, $entityManager );
 	}
 	renderIndex( $entityManager, $page, $sortName, $searchName );
 }
