@@ -1,0 +1,19 @@
+{
+  "name": "vendor_name/doc",
+  "description": "description",
+  "minimum-stability": "stable",
+  "license": "proprietary",
+  "authors": [
+    {
+      "name": "Vladyslav_Vakaliuk",
+      "email": "email@example.com"
+    }
+  ],
+  "require": {
+    "doctrine/orm": "^2.6.2",
+    "symfony/yaml": "2.*"
+  },
+  "autoload": {
+    "psr-0": {"": "src/"}
+  }
+}
