@@ -12,6 +12,7 @@ include 'header.php';
 		<button type="submit" class="btn btn-primary">Search</button>
 	</form>
 	<table class="table">
+		<caption>List of products</caption>
 		<thead>
 		<tr>
 			<th scope="col">#</th>
